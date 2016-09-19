@@ -49,7 +49,7 @@ def create_blocks(cv,datapoint):
 
 def euclidean(cv,datapoint):
 
-    r = np.power((cv-datapoint),3)
+    r = np.power((cv-datapoint),2)
     e_dist = np.sqrt(r.sum())
     return e_dist
 
@@ -69,29 +69,25 @@ def initialize_centroids(k,datapoints):
     #min_data = np.minimum.reduce(datapoints)
     #max_data = np.maximum.reduce(datapoints)
 
-    print datapoints.shape[0]
+    #print datapoints.shape[1]
 
-    #for ndim in range(datapoints.shape[0]):
-
-        #print datapoints[ndim]
+    for ndim in range(datapoints.ndim):
         min_data = np.minimum.reduce(datapoints)[ndim]
         max_data = np.maximum.reduce(datapoints)[ndim]
+        #print rp.sample(range(min_data,max_data),1)
+        centers.append(np.array(rp.sample(range(min_data,max_data),k)))
+    #print centers
 
-        #print rp.sample(range(min_data,max_data),3)
-        #centers.append(np.array(rp.sample(range(min_data,max_data),3)))
-
-
-    # print centers
-    # for i in range(len(centers)):
-    #     #print ("i is")
-    #     #print i
-    #     for j in range(len(centers[i])):
-    #         #print("j is")
-    #         #print j
-    #         if (i+1 < len(centers) and j < len(centers[i])):
-    #             print centers[i][j]
-    #             print centers[i+1][j]
-    #             centroids.append(np.array([centers[i][j],centers[i+1][j]]))
+    for i in range(len(centers)):
+        #print ("i is")
+        #print i
+        for j in range(len(centers[i])):
+            #print("j is")
+            #print j
+            if (i+1 < len(centers) and j < len(centers[i])):
+                #print centers[i][j]
+                #print centers[i+1][j]
+                centroids.append(np.array([centers[i][j],centers[i+1][j]]))
 
     return centroids
 
@@ -100,11 +96,11 @@ def initialize_centroids(k,datapoints):
 
 #main
 
-datapoints = np.array([[2,5,3],[1,5,3],[22,55,3],[42,15,3],[15,16,3]])
+datapoints = np.array([[2,5],[1,5],[22,55],[42,15],[15,16]])
 
 centroids = initialize_centroids(3,datapoints)
 
 #print centroids
-#blocks = create_blocks(centroids,datapoints)
+blocks = create_blocks(centroids,datapoints)
 
-#print blocks
+print blocks
