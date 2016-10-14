@@ -1,8 +1,57 @@
+import argparse
 import numpy as np
 import csv
 import random as rp
 import sys
 
+
+parser = argparse.ArgumentParser(description="K-MEANS Algorithm")
+parser.add_argument('-k', '--n_clusters', help="Include the number of clusters")
+parser.add_argument('-f', '--filename', help="Include the filename with path")
+parser.add_argument('-i', '--iterations', help="Include the number of iterations")
+parser.add_argument('-th', '--threshold', help="Include the threshold")
+
+
+try:
+    args = vars(parser.parse_args())
+except Exception, e:
+    exit()
+
+filename = args['filename'] or "Delta2Clean.csv"
+k = args['n_clusters'] or 3
+iterations = args['iterations'] or 100
+threshold = args['threshold'] or 0.25
+
+
+def pre_process(dpoints):
+
+    datapoints = []
+
+    data_dict = {}
+
+    data = [map(int, e) for e in dpoints[1:]]  ## skip the column names
+    myiter = 0
+    for e in data:
+        data_dict[str(myiter)] = e
+        myiter += 1
+
+    #print len(data_dict)
+
+    # class_dict = class_labels(data)
+    # print class_dict
+
+    for e in data_dict.values():
+
+        no_columns = len(e) - 1
+        ''' assuming the last columns is the label'''
+        # skip the class label
+
+        key = str(e[0:no_columns])
+        datapoints.append(e[0:no_columns])
+        # print len(e[0:8])
+        # print e[0:9]
+
+    return data_dict,datapoints,no_columns
 
 def get_data(fname):
 
@@ -25,6 +74,7 @@ def initialize_centroid(len_data,k):
 
     # select k number of indices from the number of data points
 
+    #print len_data
     cen = rp.sample(range(0,len_data),k)
 
     #print("center",len(cen))
@@ -50,7 +100,7 @@ def find_min(lst):
 
     return key[0]
 
-def create_blocks(cv,datadict):
+def create_blocks(cv,datadict,ndim):
 
 
     d_centroids={}
@@ -67,7 +117,7 @@ def create_blocks(cv,datadict):
 
             # find the euclidean distance between the centroid and datapoint
 
-            e_dist = get_distance(c,d[0:8])
+            e_dist = get_distance(c,d[0:ndim])
 
             # store in a dictionary with centroid as the key
 
@@ -80,159 +130,108 @@ def create_blocks(cv,datadict):
         c_v = find_min(lst)
 
         if c_v in d_centroids.keys():
-            d_centroids[c_v].append((key,d[0:8]))
+            d_centroids[c_v].append((key,d))
         else:
-            d_centroids[c_v] = [(key,d[0:8])];
+            d_centroids[c_v] = [(key,d[0:ndim])];
 
     return d_centroids
 
-def recalculate_centroids(prev_blks):
+def recalculate_centroids(prev_blks,ndim):
 
     n = 0
+
     new_keys = []
-    #print prev_blks
+
     for keys in prev_blks.keys():
-        #print ("keys")
+
         n = len(prev_blks[keys])
-        sum_val = [0,0,0,0,0,0,0,0]
+
+        sum_val = [np.repeat(0,ndim)]
+
         for k,values in prev_blks[keys]:
 
-            sum_val = np.array(values[0:8]) + np.array(sum_val)
+            sum_val = np.array(values[0:ndim]) + np.array(sum_val)
 
         temp = sum_val/n
 
-        #print temp
+        # print temp
+
         new_keys.append(temp)
-    #print new_keys
+
+    # print new_keys
+
     return new_keys
 
-#main
+
+def get_error(blks):
+
+    clist = []
+
+    for centeroids,cblks in blks.items():
+
+        print cblks
+
+def kmeans():
+
+    clusters = []
+
+    blocks = []
+
+    delta = 1
+    """get the data from the file"""
+
+    data = get_data(filename)
+
+    ''' get only the required columns and the dimensions of the data'''
+    data_dict, datapoints, dimensions = pre_process(data)
+
+    c_index = initialize_centroid(len(datapoints), k)
+
+    for e in c_index:
+        clusters.append(datapoints[e])
+
+    blocks = create_blocks(clusters, data_dict, int(dimensions))
+
+    i = 0
 
 
-fname ="Delta2Clean.csv"
-dpoints = get_data(fname)
-datapoints = []
-
-data_dict = {}
-
-data = [map(int,e) for e in dpoints[1:]] ## skip the column names
-iter = 0
-for e in data:
-    data_dict[str(iter)] = e
-    iter +=1
-
-#print len(data_dict)
-
-#class_dict = class_labels(data)
-#print class_dict
-
-for e in data_dict.values():
-
-        #skip the class label
-
-        key = str(e[0:8])
-        datapoints.append(e[0:8])
-        #print len(e[0:8])
-        #print e[0:9]
-
-#print class_dict
-# clusters retured are indexes generated at random
-k=7
-
-
-
-# dist = get_distance(clusters[0],data[0])
-# print clusters[0]
-# print data[0]
-# print dist
-
-
-#print blocks
-delta = 2000
-threshold = 0.025
-
-clusters = []
-clusters_prev = []
-iter_count = 0
-
-blocks = {}
-while(delta >= threshold):
-
-    #print iter_count
-    if(iter_count == 0):
-
-        #print("I should run only once")
-        # pick k clusters from datapoints
-        c_index = initialize_centroid(len(data_dict),k)
-
-
-        for e in c_index:
-            clusters.append(data_dict[str(e)][0:8])
-        #print clusters
-
-        blocks = create_blocks(clusters,data_dict)
-        #print blocks
-
-        iter_count += 1
-
-    else:
+    while(i <= iterations and delta > threshold):
 
         clusters_prev = clusters
-        #print clusters_prev
         blocks_prev = blocks
 
-        clusters = recalculate_centroids(blocks_prev)
-
-
-        #print iter_count
+        clusters = recalculate_centroids(blocks_prev,int(dimensions))
         sum_cluster_dist = 0
 
         new_k = len(clusters)
         old_k = len(clusters_prev)
         if new_k != old_k:
-
-            print("Legnth of old k:",len(clusters))
-            print("Length of new k:",len(clusters_prev))
+            print("Legnth of old k:", len(clusters))
+            print("Length of new k:", len(clusters_prev))
 
             print("collapse of centroids")
 
-        #To handle collapsing of centroids
-        for i in range(0,new_k):
-            #print i
-            #print len(clusters)
-            #print len(clusters_prev)
-            sum_cluster_dist += get_distance(clusters_prev[i],clusters[i])
+        # To handle collapsing of centroids
+        for i in range(0, new_k):
+            # print i
+            # print len(clusters)
+            # print len(clusters_prev)
+            sum_cluster_dist += get_distance(clusters_prev[i], clusters[i])
 
-        delta = (sum_cluster_dist/k)
-        blocks = create_blocks(clusters,data_dict)
+        delta = (sum_cluster_dist / k)
+        blocks = create_blocks(clusters, data_dict,int(dimensions))
 
-        iter_count += 1
-        #print delta
+        i += 1
 
-# when coverge calculate error
-#print blocks
-label = {} #label = "{(count_benign,count_malignant,"class" )}
-no_centers = 1
-total_error = 0
-for cen,blks in blocks.items():
-    #print blocks
-    #print cen
-    count_benign = 0
-    count_malignant = 0
-    for points in blks:
-        if data_dict[str(points[0])][8]  == 2: #key and value in the tuple points
-            count_benign +=1
-        elif data_dict[str(points[0])][8]  == 4:
-            count_malignant +=1
+        print delta
 
-    if count_benign > count_malignant:
-        label[str(no_centers)] = (count_benign,count_malignant,"b")
-    elif count_benign <= count_malignant:
-        label[str(no_centers)] = (count_benign,count_malignant,"m")
+    print (get_error(blocks))
 
-        total_count = (count_benign + count_malignant)
-        total_error += (float(count_malignant)/(count_benign+count_malignant))
-    #print total_error
-    no_centers +=1
-print ("Centroid labels:",label)
-print ("Total error:",total_error)
+'''get main method'''
+kmeans()
+
+# print(args)
+
+
+
+
