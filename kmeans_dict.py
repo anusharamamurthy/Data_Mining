@@ -104,6 +104,7 @@ def create_blocks(cv,datadict,ndim):
 
 
     d_centroids={}
+    blks = []
 
     # for each data point , compute the distance from each centroid
 
@@ -130,9 +131,13 @@ def create_blocks(cv,datadict,ndim):
         c_v = find_min(lst)
 
         if c_v in d_centroids.keys():
-            d_centroids[c_v].append((key,d))
+
+            d_centroids[c_v].append((key,d[0:ndim]))
+
         else:
-            d_centroids[c_v] = [(key,d[0:ndim])];
+
+            d_centroids[c_v] = [(key,d[0:ndim])]
+
 
     return d_centroids
 
@@ -163,13 +168,40 @@ def recalculate_centroids(prev_blks,ndim):
     return new_keys
 
 
-def get_error(blks):
+def get_error(data_dict,blks):
 
     clist = []
+    label_dict = {}
 
-    for centeroids,cblks in blks.items():
 
-        print cblks
+    for centeroids, cblks in blks.items():
+
+        for blkid,value in cblks:
+
+            clist.append(blkid)
+
+        if centeroids in label_dict.keys():
+            label_dict[centeroids].appendprint centeroids,get_label(data_dict,clist)
+
+
+def get_label(data_dict,clist):
+
+    label_lst = []
+
+    for nodeID in clist:
+
+        label = data_dict[nodeID][8]
+
+        label_lst.append(label)
+
+    c_mal = 0
+    c_benign = 0
+    for i in label_lst:
+
+        if i==2:
+
+    return label_lst
+
 
 def kmeans():
 
@@ -193,7 +225,6 @@ def kmeans():
     blocks = create_blocks(clusters, data_dict, int(dimensions))
 
     i = 0
-
 
     while(i <= iterations and delta > threshold):
 
@@ -225,7 +256,7 @@ def kmeans():
 
         print delta
 
-    print (get_error(blocks))
+    print (get_error(data_dict,blocks))
 
 '''get main method'''
 kmeans()
