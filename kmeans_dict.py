@@ -17,10 +17,10 @@ try:
 except Exception, e:
     exit()
 
-filename = args['filename'] or "Delta2Clean.csv"
-k = args['n_clusters'] or 3
-iterations = args['iterations'] or 100
-threshold = args['threshold'] or 0.25
+filename = args['filename'] or "iris.data.txt"
+k = int(args['n_clusters'])
+iterations = int(args['iterations']) or 100
+threshold = float(args['threshold']) or 0.25
 
 
 def pre_process(dpoints):
@@ -29,16 +29,24 @@ def pre_process(dpoints):
 
     data_dict = {}
 
-    data = [map(int, e) for e in dpoints[1:]]  ## skip the column names
+    # for i in dpoints:
+    #     print i[0:3]
+
+    # data = [map(int, e) for e in dpoints[1:]]  ## skip the column names
+
+    data = [map(float,e[0:4]) for e in dpoints]  ## no the column names
+    # print data
     myiter = 0
-    for e in data:
+    for e in dpoints:
+
         data_dict[str(myiter)] = e
         myiter += 1
 
-    #print len(data_dict)
+    # print data_dict
+    # print len(data_dict)
 
-    # class_dict = class_labels(data)
-    # print class_dict
+    #class_dict = class_labels(data)
+    #print class_dict
 
     for e in data_dict.values():
 
@@ -58,7 +66,7 @@ def get_data(fname):
     fd = open(fname)
     try:
         reader = csv.reader(fd)
-        s_data = [row for row in reader]
+        s_data = [row for row in reader if len(row) is not 0]
         # for e in s_data[1:]:
         #     e = map(int,e)
         #     data.append(e)
@@ -83,12 +91,18 @@ def initialize_centroid(len_data,k):
 def get_distance(c,d):
 
     #n = len(d)
-    #print n
-    cen = np.array(c)
-    dval = np.array(d)
-    r = np.power(cen-dval,2)
-    e_dist = np.power(r.sum(),(float(1)/2))
-    return e_dist
+    cen = np.array(map(float,c))
+
+    dval = np.array(map(float,d))
+
+    try:
+        r = (cen-dval)**2
+        #s = np.sqrt(r.sum())
+
+        e_dist = np.sqrt(r.sum())
+        return e_dist
+    except:
+        print c,d
 
 def find_min(lst):
 
@@ -126,6 +140,10 @@ def create_blocks(cv,datadict,ndim):
 
             #print e_dist
 
+            if len(d) == 0:
+                print "exception"
+
+
         # find the centroid to which datapoint is closest
 
         c_v = find_min(lst)
@@ -151,11 +169,13 @@ def recalculate_centroids(prev_blks,ndim):
 
         n = len(prev_blks[keys])
 
-        sum_val = [np.repeat(0,ndim)]
+
+        sum_val = np.array([0.0 for i in range(ndim)])
 
         for k,values in prev_blks[keys]:
 
-            sum_val = np.array(values[0:ndim]) + np.array(sum_val)
+            values = np.array(map(float,values[0:ndim]))
+            sum_val = values + sum_val
 
         temp = sum_val/n
 
@@ -170,37 +190,73 @@ def recalculate_centroids(prev_blks,ndim):
 
 def get_error(data_dict,blks):
 
-    clist = []
-    label_dict = {}
+
+    err_list = []
+    for center,c_blk in blks.items():
+        c_max = []
+        c_s = 1
+        c_vi = 1
+        c_ve = 1
+        for l in c_blk:
+
+            lbl = data_dict[l[0]][-1]
+
+            if lbl == 'Iris-setosa':
+                c_s+=1
+            elif lbl == 'Iris-virginica':
+                c_vi +=1
+            else: c_ve +=1
+
+        c_max.append(c_s)
+        c_max.append(c_vi)
+        c_max.append(c_ve)
+        max_lbl = max(c_max)
+
+        err = float(max_lbl)/(c_s+c_vi+c_ve)
+
+        err_list.append(err)
+
+    return err_list
 
 
-    for centeroids, cblks in blks.items():
-
-        for blkid,value in cblks:
-
-            clist.append(blkid)
-
-        if centeroids in label_dict.keys():
-            label_dict[centeroids].appendprint centeroids,get_label(data_dict,clist)
-
-
-def get_label(data_dict,clist):
-
-    label_lst = []
-
-    for nodeID in clist:
-
-        label = data_dict[nodeID][8]
-
-        label_lst.append(label)
-
-    c_mal = 0
-    c_benign = 0
-    for i in label_lst:
-
-        if i==2:
-
-    return label_lst
+    # clist = []
+    # label_dict = {}
+    # count_label = {}
+    #
+    #
+    # for centeroids, cblks in blks.items():
+    #
+    #     for blkid,value in cblks:
+    #
+    #         label = str(data_dict[blkid][-1])
+    #
+    #         clist.append(label)
+    #
+    # label_dict[str(centeroids)] = clist
+    #
+    # c_ver = 0
+    # c_set = 0
+    # c_vir = 0
+    # id_k = 1
+    # temp = {}
+    # for i in label_dict.keys():
+    #
+    #     for labels in label_dict[i]:
+    #
+    #         if(labels == 'Iris-setosa'):
+    #             c_set +=1
+    #         elif(labels == 'Iris-versicolor'):
+    #             c_ver +=1
+    #         else: c_vir +=1
+    #
+    #     l=[]
+    #     temp['0'] = c_set
+    #     temp['1'] = c_ver
+    #     temp['2'] = c_vir
+    #     l.append(temp)
+    #     count_label[id_k] = l
+    #
+    # return label_dict
 
 
 def kmeans():
@@ -217,12 +273,17 @@ def kmeans():
     ''' get only the required columns and the dimensions of the data'''
     data_dict, datapoints, dimensions = pre_process(data)
 
-    c_index = initialize_centroid(len(datapoints), k)
+
+    c_index = initialize_centroid(len(datapoints),int(k))
+
 
     for e in c_index:
         clusters.append(datapoints[e])
 
+    #print clusters
+
     blocks = create_blocks(clusters, data_dict, int(dimensions))
+
 
     i = 0
 
@@ -244,9 +305,7 @@ def kmeans():
 
         # To handle collapsing of centroids
         for i in range(0, new_k):
-            # print i
-            # print len(clusters)
-            # print len(clusters_prev)
+
             sum_cluster_dist += get_distance(clusters_prev[i], clusters[i])
 
         delta = (sum_cluster_dist / k)
@@ -254,9 +313,10 @@ def kmeans():
 
         i += 1
 
-        print delta
+        # print blocks
 
-    print (get_error(data_dict,blocks))
+    print ("Number of clusters is "+str(k))
+    print ("Average Accuracy is "+str(round(np.mean(get_error(data_dict,blocks))*100,2))+'%')
 
 '''get main method'''
 kmeans()
